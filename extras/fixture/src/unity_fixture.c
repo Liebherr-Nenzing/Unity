@@ -5,9 +5,9 @@
  *  [Released under MIT License. Please refer to license.txt for details]
  * ========================================== */
 
-#include <string.h>
 #include "unity_fixture.h"
 #include "unity_internals.h"
+#include <string.h>
 
 struct UNITY_FIXTURE_T UnityFixture;
 
@@ -71,7 +71,8 @@ void UnityTestRunner(unityfunction* setup,
                      const char* printableName,
                      const char* group,
                      const char* name,
-                     const char* file, unsigned int line)
+                     const char* file,
+                     unsigned int line)
 {
     if (testSelected(name) && groupSelected(group))
     {
@@ -81,7 +82,12 @@ void UnityTestRunner(unityfunction* setup,
         if (!UnityFixture.Verbose)
             UNITY_OUTPUT_CHAR('.');
         else
+        {
             UnityPrint(printableName);
+        #ifndef UNITY_REPEAT_TEST_NAME
+            Unity.CurrentTestName = NULL;
+        #endif
+        }
 
         Unity.NumberOfTests++;
         UnityMalloc_StartTest();
@@ -193,7 +199,7 @@ void* unity_malloc(size_t size)
     }
     else
     {
-        guard = (Guard*) &unity_heap[heap_index];
+        guard = (Guard*)&unity_heap[heap_index];
         heap_index += total_size;
     }
 #else
@@ -285,7 +291,7 @@ void* unity_realloc(void* oldMem, size_t size)
     if (oldMem == unity_heap + heap_index - guard->size - sizeof(end) &&
         heap_index + size - guard->size <= UNITY_INTERNAL_HEAP_SIZE_BYTES)
     {
-        release_memory(oldMem); /* Not thread-safe, like unity_heap generally */
+        release_memory(oldMem);    /* Not thread-safe, like unity_heap generally */
         return unity_malloc(size); /* No memcpy since data is in place */
     }
 #endif
@@ -305,8 +311,7 @@ struct PointerPair
     void* old_value;
 };
 
-enum { MAX_POINTERS = 50 };
-static struct PointerPair pointer_store[MAX_POINTERS];
+static struct PointerPair pointer_store[UNITY_MAX_POINTERS];
 static int pointer_index = 0;
 
 void UnityPointer_Init(void)
@@ -316,7 +321,7 @@ void UnityPointer_Init(void)
 
 void UnityPointer_Set(void** pointer, void* newValue, UNITY_LINE_TYPE line)
 {
-    if (pointer_index >= MAX_POINTERS)
+    if (pointer_index >= UNITY_MAX_POINTERS)
     {
         UNITY_TEST_FAIL(line, "Too many pointers set");
     }
@@ -391,7 +396,9 @@ int UnityGetCommandLineOptions(int argc, const char* argv[])
                     i++;
                 }
             }
-        } else {
+        }
+        else
+        {
             /* ignore unknown parameter */
             i++;
         }
